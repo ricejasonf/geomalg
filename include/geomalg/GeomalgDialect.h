@@ -11,16 +11,16 @@
 // #pragma clang diagnostic push
 // #pragma clang diagnostic ignored "-Wunused-parameter"
 
-#include "geomalg/Dialect/GeomalgDialect.h.inc"
+#include "geomalg/GeomalgDialect.h.inc"
 
 #define GET_TYPEDEF_CLASSES
-#include "geomalg/Dialect/GeomalgTypes.h.inc"
+#include "geomalg/GeomalgTypes.h.inc"
 
 #define GET_ATTRDEF_CLASSES
-#include "geomalg/Dialect/GeomalgAttrs.h.inc"
+#include "geomalg/GeomalgAttrs.h.inc"
 
 #define GET_OP_CLASSES
-#include "geomalg/Dialect/GeomalgOps.h.inc"
+#include "geomalg/GeomalgOps.h.inc"
 
 // #pragma clang diagnostic pop
 

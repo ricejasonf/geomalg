@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 4.2)
+cmake_minimum_required(VERSION 3.31)
 
 project(geomalg_project)
 
@@ -15,6 +15,7 @@ include_directories(${CMAKE_SOURCE_DIR}/include)
 set(CMAKE_CXX_STANDARD 26)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++26 -Xclang -fheavy")
 include_directories(${MLIR_INCLUDE_DIRS})
+include_directories(${CMAKE_BINARY_DIR}/include)
 
 add_subdirectory(include/geomalg)
-
+add_subdirectory(lib/Geomalg)

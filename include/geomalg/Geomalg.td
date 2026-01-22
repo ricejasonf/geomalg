@@ -37,13 +37,13 @@ def Geomalg_Blade : TypeDef<Geomalg_Dialect, "Blade", []> {
     in sorted order have positive sign.
   }];
 
-  let parameters = (ins I32:$tag, I32:$normSquared);
+  let parameters = (ins "uint32_t":$tag, "uint32_t":$normSquared);
 
   // Try to remember that the argument is a tag and not the grade.
   let assemblyFormat = "`<` $tag`,` $normSquared `>`";
 
   let extraClassDeclaration = [{
-    static constexpr unsigned tag_bit_width = sizeof(getTag()) * 8;
+    static constexpr unsigned tag_bit_width = 32;
     static constexpr unsigned tag_sign_xor_mask = 1 << (tag_bit_width - 1);
     unsigned getGrade() const {
       // Count all the bits except the sign bit.
