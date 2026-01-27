@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.31)
 
 project(geomalg_project)
 
+find_file(LLVM_EXTERNAL_LIT NAMES "lit")
 find_package(MLIR REQUIRED CONFIG)
 list(APPEND CMAKE_MODULE_PATH "${MLIR_CMAKE_DIR}")
 list(APPEND CMAKE_MODULE_PATH "${LLVM_CMAKE_DIR}")
@@ -19,3 +20,4 @@ include_directories(${CMAKE_BINARY_DIR}/include)
 
 add_subdirectory(include/geomalg)
 add_subdirectory(lib/Geomalg)
+add_subdirectory(test)

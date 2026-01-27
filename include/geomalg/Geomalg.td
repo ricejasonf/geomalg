@@ -13,6 +13,41 @@ def Geomalg_Dialect : Dialect {
   let useDefaultTypePrinterParser = 1;
 }
 
+def Geomalg_Metric : TypeDef<Geomalg_Dialect, "Metric", []> {
+  let mnemonic = "metric";
+  let description = [{
+    Define a metric tensor by specifying the dot product for pairs of basis
+    vectors defaulting to e_i . e_i = 1 and e_i . e_j = 0 for i != j.
+
+    This forms a weighted graph with an adjacency matrix concpetually
+    equivalent to the block diagonal matrix described in Eric Lengyel's
+    "Geometric Algebra Illuminated". This means we can define more
+    useful "basis vectors" opaquely as linear combinations of more
+    fundamental basis vectors. (e.g. ni and no)
+  }];
+
+  let parameters = (ins ArrayRefParameter<"geomalg::MetricEntry">:$entries);
+  let assemblyFormat = "`<` params `>`";
+  let extraClassDeclaration = [{
+
+  }];
+}
+
+def Geomalg_Zero : TypeDef<Geomalg_Dialect, "Zero", []> {
+  let mnemonic = "zero";
+  let description = [{
+    A blade of scalar zero has the zero type (iff its statically known.)
+  }];
+
+  let extraClassDeclaration = [{
+    uint32_t getCanonicalTag() const { return 0; }
+    unsigned getGrade() const { return 0; }
+    bool isBasisVector() const { return false; }
+    static constexpr bool isZero() { return true; }
+    static constexpr bool isNonnegative() { return true; }
+  }];
+}
+
 def Geomalg_Blade : TypeDef<Geomalg_Dialect, "Blade", []> {
   let mnemonic = "blade";
   let description = [{
@@ -37,18 +72,40 @@ def Geomalg_Blade : TypeDef<Geomalg_Dialect, "Blade", []> {
     in sorted order have positive sign.
   }];
 
-  let parameters = (ins "uint32_t":$tag, "uint32_t":$normSquared);
+  let parameters = (ins "uint32_t":$tag);
 
   // Try to remember that the argument is a tag and not the grade.
-  let assemblyFormat = "`<` $tag`,` $normSquared `>`";
+  let assemblyFormat = "`<` $tag `>`";
 
   let extraClassDeclaration = [{
     static constexpr unsigned tag_bit_width = 32;
     static constexpr unsigned tag_sign_xor_mask = 1 << (tag_bit_width - 1);
+
+    uint32_t getCanonicalTag() const {  // Strip the sign bit.
+      return tag_sign_xor_mask ^ getTag();
+    }
+
     unsigned getGrade() const {
       // Count all the bits except the sign bit.
-      return std::popcount(tag_sign_xor_mask ^ getTag());
+      return std::popcount(getCanonicalTag());
     }
+
+    // Basis vectors include 0-blades and 1-blades
+    bool isBasisVector() const {
+      // Include scalar as a basis vector.
+      // Exclude negative blades.
+      return getGrade() < 2 && isNonnegative();
+    }
+
+    geomalg::BladeType getCanonicalType() const {
+      return get(getContext(), getCanonicalTag());
+    }
+
+    bool isNonnegative() const {
+      return static_cast<bool>(tag_sign_xor_mask & getTag());
+    }
+
+    static constexpr bool isZero() { return false; }
   }];
 }
 
@@ -64,7 +121,7 @@ def Geomalg_Multivector : TypeDef<Geomalg_Dialect, "Multivector", []> {
     A multivector is a sum of k-blades.
   }];
 
-  let parameters = (ins Variadic<Geomalg_Blade>:$blades);
+  let parameters = (ins ArrayRefParameter<"geomalg::BladeType">:$blades);
 
   let assemblyFormat = "`<` $blades `>`";
 }
