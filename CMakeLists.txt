@@ -13,6 +13,10 @@ include_directories(${LLVM_INCLUDE_DIRS})
 include_directories(${CMAKE_BINARY_DIR}/include)
 include_directories(${CMAKE_SOURCE_DIR}/include)
 
+set(HEAVY_MODULE_PATH ${LLVM_INCLUDE_DIRS})
+set(GEOMALG_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/include)
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
+
 set(CMAKE_CXX_STANDARD 26)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++26 -Xclang -fheavy")
 include_directories(${MLIR_INCLUDE_DIRS})

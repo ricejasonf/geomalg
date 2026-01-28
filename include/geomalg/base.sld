@@ -30,9 +30,9 @@
               (create-op "builtin.module"
                          (loc: 0)
                          (operands:)
-                         (attributes: ("sym_name": name))
+                         (attributes: ("sym_name" name))
                          (result-types:)
-                         (region "body" () 0)))) ;; Just create the region.
+                         (region: "body" () 0)))) ;; Just create the region.
         ; Set the current insertion point to the region body.
         (set-insertion-point (entry-block (get-region ModuleOp)))))
 
@@ -108,8 +108,8 @@
 
     (define-syntax sum
       (syntax-rules ()
-        (sum V1 VN ...)
-        (sum-impl (syntax-source-loc V1) V1 VN ...)))
+        ((sum V1 VN ...)
+         (sum-impl (syntax-source-loc V1) V1 VN ...))))
 
     ;; TODO It would be nice to make a syntax to generate these
     ;;      but local syntax is not yet supported in heavy-scheme.
@@ -124,8 +124,8 @@
 
     (define-syntax outprod
       (syntax-rules ()
-        (outprod V1 V2)
-        (outprod-impl (syntax-source-loc V1) V1 V2)))
+        ((outprod V1 V2)
+         (outprod-impl (syntax-source-loc V1) V1 V2))))
 
     (define (inprod-impl Loc V1 V2)
       (create-op "geomalg.inprod"
@@ -136,8 +136,8 @@
 
     (define-syntax inprod
       (syntax-rules ()
-        (inprod V1 V2)
-        (inprod-impl (syntax-source-loc V1) V1 V2)))
+        ((inprod V1 V2)
+         (inprod-impl (syntax-source-loc V1) V1 V2))))
 
     (define (gprod-impl Loc V1 V2)
       (create-op "geomalg.gprod"
@@ -148,8 +148,8 @@
 
     (define-syntax gprod
       (syntax-rules ()
-        (gprod V1 V2)
-        (gprod-impl (syntax-source-loc V1) V1 V2)))
+        ((gprod V1 V2)
+         (gprod-impl (syntax-source-loc V1) V1 V2))))
 
     (define (rev-impl Loc V)
       (create-op "geomalg.rev"
@@ -160,8 +160,8 @@
 
     (define-syntax rev
       (syntax-rules ()
-        (rev V)
-        (rev-impl (syntax-source-loc V) V)))
+        ((rev V)
+         (rev-impl (syntax-source-loc V) V))))
 
     (define (inv-impl Loc V)
       (create-op "geomalg.inv"
@@ -172,6 +172,6 @@
 
     (define-syntax inv
       (syntax-rules ()
-        (inv V)
-        (inv-impl (syntax-source-loc V) V)))
+        ((inv V)
+         (inv-impl (syntax-source-loc V) V))))
     )) ;; define-library
