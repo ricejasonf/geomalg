@@ -23,10 +23,10 @@ def Geomalg_Metric : TypeDef<Geomalg_Dialect, "Metric", []> {
     equivalent to the block diagonal matrix described in Eric Lengyel's
     "Geometric Algebra Illuminated". This means we can define more
     useful "basis vectors" opaquely as linear combinations of more
-    fundamental basis vectors. (e.g. ni and no)
+    fundamental orthonormal basis vectors. (e.g. ni and no)
   }];
 
-  let parameters = (ins ArrayRefParameter<"geomalg::MetricEntry">:$entries);
+  //let parameters = (ins ArrayRefParameter<"geomalg::MetricEntry">:$entries);
   let assemblyFormat = "`<` params `>`";
   let extraClassDeclaration = [{
 
@@ -79,10 +79,10 @@ def Geomalg_Blade : TypeDef<Geomalg_Dialect, "Blade", []> {
 
   let extraClassDeclaration = [{
     static constexpr unsigned tag_bit_width = 32;
-    static constexpr unsigned tag_sign_xor_mask = 1 << (tag_bit_width - 1);
+    static constexpr unsigned tag_sign_mask = 1 << (tag_bit_width - 1);
 
     uint32_t getCanonicalTag() const {  // Strip the sign bit.
-      return tag_sign_xor_mask ^ getTag();
+      return ~tag_sign_mask & getTag();
     }
 
     unsigned getGrade() const {
@@ -102,7 +102,7 @@ def Geomalg_Blade : TypeDef<Geomalg_Dialect, "Blade", []> {
     }
 
     bool isNonnegative() const {
-      return static_cast<bool>(tag_sign_xor_mask & getTag());
+      return !static_cast<bool>(tag_sign_mask & getTag());
     }
 
     static constexpr bool isZero() { return false; }
@@ -111,9 +111,8 @@ def Geomalg_Blade : TypeDef<Geomalg_Dialect, "Blade", []> {
 
 class Geomalg_BladeOfGradeK<int K> :
   Type<
-    CPred<[{
-      "::llvm::cast<geomalg::Geomalg_Blade>($_self).getGrade() == " }] # K>
-      >;
+    CPred<
+      "::llvm::cast<geomalg::BladeType>($_self).getGrade() == " # K>>;
                       
 def Geomalg_Multivector : TypeDef<Geomalg_Dialect, "Multivector", []> {
   let mnemonic = "multivector";

@@ -1,29 +1,28 @@
 (import (heavy base))
 
 (define-library (geomalg base)
-  (export
-    geomalg-module-init
-    define-func
-    basis-vector-type
-    multivector-type
-    e0 e1 e2 e3 ni no ;; Conformal GA basis vectors (e0 is scalar)
-    ; k-blade ;; TODO make literal op
-    sum
-    outprod
-    inprod
-    gprod
-    rev
-    inv)
   (import (heavy base)
           (heavy mlir))
   (begin
     (load-plugin "libGeomalg.so")
-    (define basis-vector-type-impl
+    ;; Take a tag that is a power of two (not including the sign bit).
+    (define basis-vector-type
       (load-builtin "geomalg_basis_vector_type"))
-    (define multivector-type-impl
+    ;; Each argument is a non-empty list of basis vectors
+    ;; where the sign is determined by the order.
+    ;; Alternatively, accept a raw tag value.
+    (define blade-type
+      (load-builtin "geomalg_blade_type"))
+    ;; Take a nonempty list of blade-types.
+    ;; Sort terms by tag value.
+    (define multivector-type
       (load-builtin "geomalg_multivector_type"))
+    ;; Register the geomalg dialect and such.
+    (define geomalg-init
+      (load-builtin "geomalg_init"))
+    (geomalg-init)
+    (load-dialect "geomalg")
 
-    (define current-module 0)
     ;; Initialize a module and set it as current module.
     (define (geomalg-module-init name)
       (let ((ModuleOp
@@ -34,77 +33,75 @@
                          (result-types:)
                          (region: "body" () 0)))) ;; Just create the region.
         ; Set the current insertion point to the region body.
-        (set-insertion-point (entry-block (get-region ModuleOp)))))
+        (at-block-begin (entry-block (get-region ModuleOp)))
+        ModuleOp))
 
     ;; Just initialize a monolithic module.
-    (geomalg-module-init "geomalg_the_module")
+    (define geomalg-current-module
+      (geomalg-module-init "geomalg_the_module"))
 
     ;; If any function parameter type is unknown
     ;; then the func is used as a template.
     (define !geomalg.unknown (type "!geomalg.unknown"))
 
-    (define-syntax basis-vector-type
-      (syntax-rules (tag: norm-squared:)
-        ((basis-vector-type (tag: Tag) ; Tags are integer powers of two.
-            (norm-squared: NormSquared))
-         (basis-vector-type-impl
-           Tag NormSquared))))
-
-    ;; Each argument is a non-empty list of basis vectors.
-    ;; The resulting type is canonicalized by
-    ;;    - adjusting sign of each blade according to
-    ;;      the input order of the basis vectors
-    ;;    - combining like terms with the same sign
-    ;;    - sorting blades by tag
-    (define-syntax multivector-type
-      (syntax-rules ()
-        ((multivector-type (BasisVector1M BasisVectorNM ...) ...)
-         (multi-vector-type-impl
-           '(BasisVector1M BasisVectorNM ...) ...))))
-
     ;; Go full 5-d Conformal Geometric Algebra since
     ;; everything we want is a subalgebra of that.
-    (define e0 (basis-vector-type ; Scalars
-                 (tag: 0)
-                 (norm-squared: 1)))
-    (define e1 (basis-vector-type
-                 (tag: 1)
-                 (norm-squared: 1)))
-    (define e2 (basis-vector-type
-                 (tag: 2)
-                 (norm-squared: 1)))
-    (define e3 (basis-vector-type
-                 (tag: 4)
-                 (norm-squared: 1)))
-    (define ni (basis-vector-type
-                 (tag: 8)
-                 (norm-squared: 0)))
-    (define no (basis-vector-type
-                 (tag: 16)
-                 (norm-squared: 0)))
+    (define scalar (basis-vector-type 0))
+    (define e1 (basis-vector-type 1))
+    (define e2 (basis-vector-type 2))
+    (define e3 (basis-vector-type 4))
+    (define ni (basis-vector-type 8))
+    (define no (basis-vector-type 16))
+
+    (define (define-func-impl Loc ReturnLoc FuncName ArgTypes ArgLocs BodyFn)
+      (define FuncOp
+        (create-op "func.func"
+                   (loc: Loc)
+                   (operands:)
+                   (attributes:
+                     ("sym_name" (string-attr FuncName))
+                     ("function_type"
+                       (type-attr (%function-type
+                                   (apply vector ArgTypes)
+                                   #(!geomalg.unknown)))))
+                   (result-types:)
+                   (region: "body" () 0)))
+      (with-builder (lambda ()
+        (define Block (entry-block FuncOp))
+        (define (AddArg ArgType ArgLoc)
+          (add-argument Block ArgType ArgLoc))
+        (define BlockArgs
+          (map AddArg ArgTypes ArgLocs))
+        (at-block-begin Block)
+        (let ((Result (apply BodyFn BlockArgs)))
+          (create-op "func.return"
+                     (loc: ReturnLoc)
+                     (operands: Result)
+                     (attributes:)
+                     (result-types:)))
+        (if #f #f) ;; Return undefined.
+        )))
 
     (define-syntax define-func
       (syntax-rules()
         ((define-func FuncName ((ArgName : ArgType) ...)
-                      Body)
-         (create-op "func.func"
-                    (loc: (syntax-source-loc FuncName))
-                    (operands:)
-                    (attributes:
-                      ("sym_name" (string-attr FuncName))
-                      ("function_type"
-                        (type-attr (%function-type
-                                     #(ArgType ...)
-                                     #()))))
-                    (result-types:)
-                    (region: "body" Body)))))
+                      BodyExprI ... BodyExprN)
+         (define-func-impl (syntax-source-loc FuncName)
+                           (syntax-source-loc BodyExprN)
+                           'FuncName
+                           (list ArgType ...)
+                           (list (syntax-source-loc ArgName) ...)
+                           (lambda (ArgName ...)
+                             BodyExprI
+                             ...
+                             BodyExprN)))))
 
     (define (sum-impl Loc . VN)
-      (create-op "geomalg.sum"
-                 (loc: Loc)
-                 (operands: VN)
-                 (attributes:)
-                 (result-types: !geomalg.unknown)))
+      (result (create-op "geomalg.sum"
+                         (loc: Loc)
+                         (operands: VN)
+                         (attributes:)
+                         (result-types: !geomalg.unknown))))
 
     (define-syntax sum
       (syntax-rules ()
@@ -116,11 +113,11 @@
     ;;      The impl functions prevent syntax garbage creation.
 
     (define (outprod-impl Loc V1 V2)
-      (create-op "geomalg.outprod"
-                 (loc: Loc)
-                 (operands: V1 V2)
-                 (attributes:)
-                 (result-types: !geomalg.unknown)))
+      (result (create-op "geomalg.outprod"
+                         (loc: Loc)
+                         (operands: V1 V2)
+                         (attributes:)
+                         (result-types: !geomalg.unknown))))
 
     (define-syntax outprod
       (syntax-rules ()
@@ -128,11 +125,11 @@
          (outprod-impl (syntax-source-loc V1) V1 V2))))
 
     (define (inprod-impl Loc V1 V2)
-      (create-op "geomalg.inprod"
-                 (loc: Loc)
-                 (operands: V1 V2)
-                 (attributes:)
-                 (result-types: !geomalg.unknown)))
+      (result (create-op "geomalg.inprod"
+                         (loc: Loc)
+                         (operands: V1 V2)
+                         (attributes:)
+                         (result-types: !geomalg.unknown))))
 
     (define-syntax inprod
       (syntax-rules ()
@@ -140,11 +137,11 @@
          (inprod-impl (syntax-source-loc V1) V1 V2))))
 
     (define (gprod-impl Loc V1 V2)
-      (create-op "geomalg.gprod"
-                 (loc: Loc)
-                 (operands: V1 V2)
-                 (attributes:)
-                 (result-types: !geomalg.unknown)))
+      (result (create-op "geomalg.gprod"
+                         (loc: Loc)
+                         (operands: V1 V2)
+                         (attributes:)
+                         (result-types: !geomalg.unknown))))
 
     (define-syntax gprod
       (syntax-rules ()
@@ -152,11 +149,11 @@
          (gprod-impl (syntax-source-loc V1) V1 V2))))
 
     (define (rev-impl Loc V)
-      (create-op "geomalg.rev"
-                 (loc: Loc)
-                 (operands: V)
-                 (attributes:)
-                 (result-types: !geomalg.unknown)))
+      (result (create-op "geomalg.rev"
+                         (loc: Loc)
+                         (operands: V)
+                         (attributes:)
+                         (result-types: !geomalg.unknown))))
 
     (define-syntax rev
       (syntax-rules ()
@@ -164,14 +161,30 @@
          (rev-impl (syntax-source-loc V) V))))
 
     (define (inv-impl Loc V)
-      (create-op "geomalg.inv"
-                 (loc: Loc)
-                 (operands: V)
-                 (attributes:)
-                 (result-types: !geomalg.unknown)))
+      (result (create-op "geomalg.inv"
+                         (loc: Loc)
+                         (operands: V)
+                         (attributes:)
+                         (result-types: !geomalg.unknown))))
 
     (define-syntax inv
       (syntax-rules ()
         ((inv V)
          (inv-impl (syntax-source-loc V) V))))
-    )) ;; define-library
+    )
+    (export
+      geomalg-current-module
+      geomalg-module-init
+      define-func
+      basis-vector-type
+      blade-type
+      multivector-type
+      scalar e0 e1 e2 e3 ni no ;; Conformal GA basis vectors
+      ; k-blade ;; TODO make literal op?
+      sum
+      outprod
+      inprod
+      gprod
+      rev
+      inv)
+  ) ;; define-library
