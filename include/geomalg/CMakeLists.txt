@@ -9,4 +9,9 @@ mlir_tablegen(GeomalgDialect.h.inc -gen-dialect-decls)
 mlir_tablegen(GeomalgDialect.cpp.inc -gen-dialect-defs)
 add_public_tablegen_target(GeomalgOpsIncGen)
 set_target_properties(GeomalgOpsIncGen PROPERTIES
-  DESCRIPTION "woof")
+  DESCRIPTION "Geomalg MLIR dialect")
+
+set(LLVM_TARGET_DEFINITIONS Passes.td)
+mlir_tablegen(GeomalgPasses.h.inc -gen-pass-decls -name Geomalg)
+add_public_tablegen_target(GeomalgPassesIncGen PROPERTIES
+  DESCRIPTION "Geomalg MLIR transformation passes")

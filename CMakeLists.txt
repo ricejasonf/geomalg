@@ -15,6 +15,7 @@ include_directories(${CMAKE_SOURCE_DIR}/include)
 
 set(HEAVY_MODULE_PATH ${LLVM_INCLUDE_DIRS})
 set(GEOMALG_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/include)
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 
 set(CMAKE_CXX_STANDARD 26)
@@ -24,4 +25,5 @@ include_directories(${CMAKE_BINARY_DIR}/include)
 
 add_subdirectory(include/geomalg)
 add_subdirectory(lib/Geomalg)
+add_subdirectory(tools/geomalg-opt)
 add_subdirectory(test)

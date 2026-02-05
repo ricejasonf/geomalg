@@ -125,7 +125,7 @@ def Geomalg_Multivector : TypeDef<Geomalg_Dialect, "Multivector", []> {
   let assemblyFormat = "`<` $blades `>`";
 }
 
-def Geomalg_Unknown : TypeDef<Geomalg_Dialect, "unknown", []> {
+def Geomalg_Unknown : TypeDef<Geomalg_Dialect, "Unknown", []> {
   let mnemonic = "unknown";
   let description = [{
     A blade or multivector whose type must be inferred.

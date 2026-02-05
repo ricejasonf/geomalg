@@ -1,4 +1,4 @@
-#include <geomalg/GeomalgDialect.h>
+#include <geomalg/Dialect.h>
 #include <llvm/ADT/TypeSwitch.h>
 #include <mlir/IR/DialectImplementation.h>
 #include <mlir/IR/OpImplementation.h>

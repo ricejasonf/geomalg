@@ -1,6 +1,21 @@
 (import (heavy base))
 
 (define-library (geomalg base)
+  (export
+    geomalg-current-module
+    geomalg-module-init
+    define-func
+    basis-vector-type
+    blade-type
+    multivector-type
+    scalar e1 e2 e3 ni no ;; Conformal GA basis vectors
+    ; k-blade ;; TODO make literal op?
+    sum
+    outprod
+    inprod
+    gprod
+    rev
+    inv)
   (import (heavy base)
           (heavy mlir))
   (begin
@@ -171,20 +186,4 @@
       (syntax-rules ()
         ((inv V)
          (inv-impl (syntax-source-loc V) V))))
-    )
-    (export
-      geomalg-current-module
-      geomalg-module-init
-      define-func
-      basis-vector-type
-      blade-type
-      multivector-type
-      scalar e0 e1 e2 e3 ni no ;; Conformal GA basis vectors
-      ; k-blade ;; TODO make literal op?
-      sum
-      outprod
-      inprod
-      gprod
-      rev
-      inv)
-  ) ;; define-library
+    )) ;; define-library

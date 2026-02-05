@@ -1,4 +1,5 @@
-#include <geomalg/GeomalgDialect.h>
+#include <geomalg/Dialect.h>
+#include <geomalg/Type.h>
 #include <heavy/Context.h>
 #include <heavy/MlirHelper.h>
 #include <heavy/Value.h>
@@ -56,41 +57,9 @@ void geomalg_blade_type(heavy::Context& C, heavy::ValueRefs Args) {
   if (BladeTypes.empty())
     return C.RaiseError("expecting at least one basis vector type");
 
-  // Manually sort by canonical tag (ie without regard to sign bit.)
-  // For each swap, we change the sign which may be incorrect if
-  // elements are not unique, but we check that after sorting.
-  uint32_t SignTag = 0;
-  auto Swap = [&SignTag](geomalg::BladeType& A, geomalg::BladeType& B) {
-      std::swap(A, B);
-      SignTag ^= geomalg::BladeType::tag_sign_mask;
-    };
-  auto LessThanEqual = [](auto& A, auto& B) {
-      return A.getTag() <= B.getTag();
-    };
-  for (unsigned I = 0; I < BladeTypes.size(); I++) {
-    for (unsigned J = I + 1; J < BladeTypes.size(); J++) {
-      if (!LessThanEqual(BladeTypes[I], BladeTypes[J]))
-        Swap(BladeTypes[I], BladeTypes[J]);
-    }
-  }
-
-  // If we have more than one of any basis
-  // element then the whole thing becomes zero.
-  size_t OrigSize = BladeTypes.size();
-  llvm::unique(BladeTypes);
-  if (OrigSize != BladeTypes.size())
-    return C.Cont(C.CreateAny<mlir::Type>((mlir::Type(geomalg::ZeroType()))));
-
-  uint32_t Tag = 0;
-  for (geomalg::BladeType BladeType : BladeTypes)
-    Tag |= BladeType.getTag();
-  
-  // Incorporate the sign bit.
-  Tag |= SignTag;
-
-  mlir::MLIRContext* MLIRContext = heavy::mlir_helper::getCurrentContext(C);
-  mlir::Type BT = geomalg::BladeType::get(MLIRContext, Tag);
-  return C.Cont(C.CreateAny<mlir::Type>(BT));
+  mlir::Type Result = geomalg::createBladeType(BladeTypes);
+  heavy::Value AnyVal = C.CreateAny<mlir::Type>(Result);
+  return C.Cont(AnyVal);
 }
 
 void geomalg_multivector_type(heavy::Context& C, heavy::ValueRefs Args) {
@@ -108,22 +77,11 @@ void geomalg_multivector_type(heavy::Context& C, heavy::ValueRefs Args) {
     }
   }
 
-  // An empty Multivector is like the False sum type.
-  // It exists as a contradiction.
   if (BladeTypes.empty())
     return C.RaiseError("multivector type must be nonempty");
 
-  // Sort by canonical tag and sign.
-  llvm::sort(BladeTypes, [](auto& A, auto& B) {
-      return (A.getCanonicalTag() < B.getCanonicalTag()) ||
-             (A.isNonnegative() && !B.isNonnegative());
-    });
-
-  // Unique by pointer-like equality. (mlir::Types are uniqued)
-  llvm::unique(BladeTypes);
-
-  mlir::MLIRContext* MLIRContext = heavy::mlir_helper::getCurrentContext(C);
-  mlir::Type MT = geomalg::MultivectorType::get(MLIRContext, BladeTypes);
-  C.Cont(C.CreateAny(MT));
+  mlir::Type Result = geomalg::createMultivectorType(BladeTypes);
+  heavy::Value AnyVal = C.CreateAny<mlir::Type>(Result);
+  return C.Cont(AnyVal);
 }
 }
